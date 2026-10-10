@@ -889,7 +889,9 @@ def _apply_markdown_formatting_rules(markdown_text: str) -> str:
         if fence_match:
             marker = fence_match.group(1)
             if fence is None:
-                fence = marker[0] * 3
+                # Keep the full opener: a longer fence is only closed by a
+                # marker at least as long, so a shorter inner line stays code.
+                fence = marker
             elif (
                 marker[0] == fence[0]
                 and len(marker) >= len(fence)

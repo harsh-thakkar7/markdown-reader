@@ -62,6 +62,17 @@ class TestFormattingRulesSkipFencedCode(unittest.TestCase):
         src = "```\n```python\n#still code\n```\n"
         self.assertEqual(_apply_markdown_formatting_rules(src), src)
 
+    def test_longer_opener_is_not_closed_by_a_shorter_fence(self):
+        # A four-backtick opener is only closed by four or more backticks. The
+        # inner "```" line is code, so the "#" comment after it must not be
+        # rewritten into a heading.
+        for src in (
+            "````\n#notcode\n```\n#stillcode\n````\n",
+            "~~~~\n#notcode\n~~~\n#stillcode\n~~~~\n",
+            "`````\n#a\n````\n#b\n`````\n",
+        ):
+            self.assertEqual(_apply_markdown_formatting_rules(src), src, src)
+
 
 class TestFencedHeadingsInGeneratedTOC(unittest.TestCase):
     """A ``#`` line inside a code fence is code, not a heading."""
