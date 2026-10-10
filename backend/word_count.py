@@ -11,6 +11,23 @@ import re
 
 _WPM = 238
 
+# A link reference definition, transcribed from markdown2's _link_def_re so the
+# count matches what the renderer actually shows: an id, the destination, and an
+# optional quoted title on one of the next two lines.
+_LINK_DEF_RE = re.compile(
+    r"""^[ ]{0,3}\[(.+)\]:[ \t]*\n?          # id
+        [ \t]*\n?
+        [ \t]*
+        <?(.+?)>?[ \t]*\n                  # destination
+        (?:                                  # optional title
+            \n?[ \t]*
+            (?<=\s)['"(]
+            ([^\n]*)
+            ['")][ \t]*
+        )?""",
+    re.M | re.X,
+)
+
 
 def strip_markdown(text: str) -> str:
     """Remove common Markdown syntax tokens before counting words."""
@@ -18,6 +35,13 @@ def strip_markdown(text: str) -> str:
     text = re.sub(r"~~~[\s\S]*?~~~", " ", text)
     text = re.sub(r"`[^`]*`", " ", text)
     text = re.sub(r"<[^>]+>", " ", text)
+    # A link reference definition ("[id]: url", optionally with a title on a
+    # following line) is consumed by the renderer and never appears in the
+    # document, so it holds no visible words. Counting it inflated every
+    # document that defines its links at the bottom, which is the recommended
+    # style for keeping link labels out of the prose. Matched with markdown2's
+    # own _link_def_re so the two agree on what a definition looks like.
+    text = _LINK_DEF_RE.sub(" ", text)
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
     text = re.sub(r"\[([^\]]*)\]\[[^\]]*\]", r"\1", text)

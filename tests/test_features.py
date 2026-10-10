@@ -182,6 +182,50 @@ class TestStripMarkdown(unittest.TestCase):
                 self.assertNotIn("<h1", _render_markdown(md))
                 self.assertEqual(_count_words(_strip_markdown(md)), 3)
 
+    def test_link_definition_holds_no_words(self):
+        # A reference definition is consumed by the renderer and never appears
+        # in the document, so counting it added words the reader cannot see.
+        # Keeping definitions at the bottom is the recommended style precisely
+        # because they are not part of the prose.
+        md = "[a]: https://example.com/guide\n"
+        self.assertNotIn("example.com", _render_markdown(md))
+        self.assertEqual(_count_words(_strip_markdown(md)), 0)
+
+    def test_indented_link_definition_holds_no_words(self):
+        for md in ("[a]: https://example.com\n", "   [a]: https://example.com\n"):
+            with self.subTest(markdown=md):
+                self.assertEqual(_count_words(_strip_markdown(md)), 0)
+
+    def test_link_definition_with_a_title_holds_no_words(self):
+        md = '[a]: https://example.com\n   "A Title"\n'
+        self.assertEqual(_count_words(_strip_markdown(md)), 0)
+
+    def test_link_definition_in_angle_brackets_holds_no_words(self):
+        md = "[a]: <https://example.com>\n"
+        self.assertEqual(_count_words(_strip_markdown(md)), 0)
+
+    def test_reference_defined_document_counts_only_its_prose(self):
+        # 8 visible words in the rendered document.
+        md = (
+            "# My Notes\n\n"
+            "See the [official guide][guide] for details.\n\n"
+            "![banner](hero.png)\n\n"
+            "[guide]: https://example.com/guide\n"
+        )
+        self.assertEqual(_count_words(_strip_markdown(md)), 8)
+
+    def test_indented_code_block_is_not_mistaken_for_a_definition(self):
+        # Four spaces makes it an indented code block, which the renderer shows
+        # verbatim, so its words are still visible and must still be counted.
+        md = "    [a]: https://example.com\n"
+        self.assertIn("[a]:", _render_markdown(md))
+        self.assertEqual(_count_words(_strip_markdown(md)), 2)
+
+    def test_prose_that_looks_like_a_definition_keeps_its_words(self):
+        md = "see [a]: https://example.com in prose\n"
+        self.assertIn("see", _render_markdown(md))
+        self.assertEqual(_count_words(_strip_markdown(md)), 5)
+
     def test_trailing_spaces_do_not_stop_the_underline_matching(self):
         for underline in ("=  ", "===   ", "=\t"):
             with self.subTest(underline=underline):
