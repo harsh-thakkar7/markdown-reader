@@ -41,9 +41,12 @@ def _mask_code_regions(markdown_text: str, replacements: dict[str, str]) -> str:
     text = markdown_text or ""
     factory = _PlaceholderFactory("CODEPLACEHOLDER", text, replacements)
 
-    # Fenced code blocks: ``` ... ``` or ~~~ ... ~~~, spanning lines.
+    # Fenced code blocks: ``` ... ``` or ~~~ ... ~~~, spanning lines. markdown2
+    # lets the opening fence be indented, so a block nested under a list item --
+    # the common way to show a Markdown sample -- has to be masked too, or its
+    # example image links get rewritten as if they were live images.
     text = re.sub(
-        r"(?ms)^(`{3,}|~{3,})[^\n]*\n.*?^\1[^\n]*\n?$",
+        r"(?ms)^[ \t]*(`{3,}|~{3,})[^\n]*\n.*?^[ \t]*\1[^\n]*\n?$",
         lambda m: factory(m.group(0)),
         text,
     )
