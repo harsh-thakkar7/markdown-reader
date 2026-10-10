@@ -451,6 +451,26 @@ class TestImagePathsSkipCodeRegions(unittest.TestCase):
         text = "~~~markdown\n![diagram](diagram.png)\n~~~\n"
         self.assertEqual(fix_image_paths(text, self.BASE), text)
 
+    def test_fence_indented_under_a_list_item_is_treated_as_code(self):
+        # markdown2 lets the opening fence be indented, so a sample nested in a
+        # list item is still a code block. Only column-zero fences were masked,
+        # so the example below was rewritten to an absolute file:// URL and
+        # rendered as the literal text `![diagram](file:///.../diagram.png)`.
+        text = "1. Step one:\n\n   ```markdown\n   ![diagram](diagram.png)\n   ```\n"
+        self.assertEqual(fix_image_paths(text, self.BASE), text)
+
+    def test_indented_fence_does_not_hide_a_real_image_after_it(self):
+        text = (
+            "1. Step one:\n\n"
+            "   ```markdown\n"
+            "   ![diagram](diagram.png)\n"
+            "   ```\n\n"
+            "![chart](chart.png)\n"
+        )
+        self.assertIn(
+            f"![chart](file://{self.BASE}/chart.png)", fix_image_paths(text, self.BASE)
+        )
+
     def test_two_backtick_span_is_treated_as_code(self):
         text = "a ``![d](d.png)`` b"
         self.assertEqual(fix_image_paths(text, self.BASE), text)
