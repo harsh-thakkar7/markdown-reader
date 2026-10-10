@@ -48,11 +48,16 @@ def _mask_code_regions(markdown_text: str, replacements: dict[str, str]) -> str:
         text,
     )
 
-    # Inline code spans: one or two backticks with non-backtick content.
+    # Inline code spans. Mirrors markdown2's own _code_span_re: any run of
+    # backticks opens the span, the closing run must be the same length, and
+    # the content may span lines. Matching only one or two backticks and
+    # forbidding newlines left spans that markdown2 does render as <code>
+    # unmasked, so their contents were rewritten as if they were live text.
     text = re.sub(
-        r"(?<!`)(`{1,2})[^`\n]+(?<!\n)\1(?!`)",
+        r"(?<!\\)(`+)(?!`)(.+?)(?<!`)\1(?!`)",
         lambda m: factory(m.group(0)),
         text,
+        flags=re.S,
     )
 
     return text

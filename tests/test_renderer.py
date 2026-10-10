@@ -4,7 +4,7 @@ import re
 import unittest
 
 from backend.ai_logic import _generate_markdown_toc
-from backend.render_helpers import fix_image_paths
+from backend.render_helpers import fix_image_paths, protect_math
 from backend.renderer import render_markdown
 
 
@@ -472,3 +472,26 @@ class TestImagePathsSkipCodeRegions(unittest.TestCase):
         self.assertNotIn("PLACEHOLDER", html)
         self.assertIn("b.png", html)
         self.assertIn(f'<img src="file://{self.BASE}/c.png"', html)
+
+    def test_inline_span_of_three_backticks_is_treated_as_code(self):
+        # markdown2 accepts any run length as an inline delimiter, so a
+        # three-backtick span is a <code> element. It was left unmasked and its
+        # example image was rewritten to an absolute file:// URL.
+        text = "Use ```![alt](shot.png)``` here."
+        self.assertEqual(fix_image_paths(text, self.BASE), text)
+
+    def test_inline_span_containing_a_newline_is_treated_as_code(self):
+        # A code span may hold a line break. The old pattern forbade newlines
+        # inside the span, so anything wrapped across lines was unmasked.
+        text = "Use ``![alt](shot.png)\nstill code`` here."
+        self.assertEqual(fix_image_paths(text, self.BASE), text)
+
+    def test_math_inside_a_three_backtick_span_is_not_typeset(self):
+        text = 'Run ```awk "{print $1}"``` now.'
+        protected, replacements = protect_math(text)
+        self.assertEqual(protected, text)
+        self.assertEqual(replacements, {})
+
+    def test_inline_span_around_a_real_image_does_not_hide_it(self):
+        html = render_markdown("`a` ![chart](chart.png) `b`", base_dir=self.BASE)
+        self.assertIn(f'<img src="file://{self.BASE}/chart.png"', html)
